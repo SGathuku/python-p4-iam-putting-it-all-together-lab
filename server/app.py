@@ -1,3 +1,5 @@
+# app.py
+
 #!/usr/bin/env python3
 
 from flask import request, session, jsonify
@@ -15,14 +17,30 @@ class Signup(Resource):
         image_url = data.get('image_url')
         bio = data.get('bio')
 
+        # Validate user input
+        errors = []
+        if not username:
+            errors.append("Username is required.")
+        if not password:
+            errors.append("Password is required.")
+        if errors:
+            return {'errors': errors}, 422
+        
+        # Create new user
         user = User(username=username, password_hash=password, image_url=image_url, bio=bio)
         try:
             db.session.add(user)
             db.session.commit()
-            return jsonify(user.to_dict())
+            session['user_id'] = user.id
+            return jsonify({
+                'id': user.id,
+                'username': user.username,
+                'image_url': user.image_url,
+                'bio': user.bio
+            }), 201
         except IntegrityError:
             db.session.rollback()
-            return {'error': 'Username already taken'}, 400
+            return {'errors': ['Username already taken']}, 422
 
 class CheckSession(Resource):
     def get(self):
