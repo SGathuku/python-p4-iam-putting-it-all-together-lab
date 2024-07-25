@@ -86,10 +86,15 @@ class Logout(Resource):
         return {'error': 'Not logged in'}, 401
 
 
+
 class RecipeIndex(Resource):
     def get(self):
+        user_id = session.get('user_id')
+        if not user_id:
+            return {'error': 'Not logged in'}, 401
+
         recipes = Recipe.query.all()
-        return jsonify([recipe.to_dict() for recipe in recipes])
+        return jsonify([recipe.to_dict() for recipe in recipes]), 200
 
     def post(self):
         data = request.get_json()
@@ -102,10 +107,19 @@ class RecipeIndex(Resource):
         instructions = data.get('instructions')
         minutes_to_complete = data.get('minutes_to_complete')
 
+        # Validate recipe input
+        errors = []
+        if not title:
+            errors.append("Title is required.")
+        if not instructions or len(instructions) < 50:
+            errors.append("Instructions must be at least 50 characters long.")
+        if errors:
+            return {'errors': errors}, 422
+
         recipe = Recipe(user=user, title=title, instructions=instructions, minutes_to_complete=minutes_to_complete)
         db.session.add(recipe)
         db.session.commit()
-        return jsonify(recipe.to_dict())
+        return jsonify(recipe.to_dict()), 201
 
 api.add_resource(Signup, '/signup', endpoint='signup')
 api.add_resource(CheckSession, '/check_session', endpoint='check_session')
