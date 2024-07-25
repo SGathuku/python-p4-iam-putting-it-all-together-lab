@@ -79,9 +79,12 @@ class Login(Resource):
 
 
 class Logout(Resource):
-    def post(self):
-        session.pop('user_id', None)
-        return {'message': 'Logged out successfully'}
+    def delete(self):
+        user_id = session.pop('user_id', None)
+        if user_id:
+            return {}, 204
+        return {'error': 'Not logged in'}, 401
+
 
 class RecipeIndex(Resource):
     def get(self):
