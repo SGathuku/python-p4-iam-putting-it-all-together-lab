@@ -1,57 +1,50 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship
-from flask_bcrypt import Bcrypt
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy_serializer import SerializerMixin
+
 from config import db, bcrypt
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
-    
-    id = Column(Integer, primary_key=True)
-    username = Column(String(80), unique=True, nullable=False)
-    _password_hash = Column(String(128), nullable=False)
-    image_url = Column(String(255))
-    bio = Column(String(500))
-    
-    
-    recipes = relationship('Recipe', back_populates='user', lazy=True)
 
-    @property
-    def password(self):
-        raise AttributeError("Password is not readable")
+    serialize_rules = ('-recipes.user', '-_password_hash',)
 
-    @password.setter
-    def password(self, password):
-        self._password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String, unique=True, nullable=False)
+    _password_hash = db.Column(db.String)
+    image_url = db.Column(db.String)
+    bio = db.Column(db.String)
 
-    def verify_password(self, password):
-        return bcrypt.check_password_hash(self._password_hash, password)
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'username': self.username,
-            'image_url': self.image_url,
-            'bio': self.bio
-        }
+    recipes = db.relationship('Recipe', backref='user')
+
+    @hybrid_property
+    def password_hash(self):
+        raise AttributeError('Password hashes may not be viewed.')
+
+    @password_hash.setter
+    def password_hash(self, password):
+        password_hash = bcrypt.generate_password_hash(
+            password.encode('utf-8'))
+        self._password_hash = password_hash.decode('utf-8')
+
+    def authenticate(self, password):
+        return bcrypt.check_password_hash(
+            self._password_hash, password.encode('utf-8'))
+
+    def __repr__(self):
+        return f'<User {self.username}>'
 
 class Recipe(db.Model, SerializerMixin):
     __tablename__ = 'recipes'
-    
-    id = Column(Integer, primary_key=True)
-    title = Column(String(255), nullable=False)
-    instructions = Column(String(500), nullable=False)
-    minutes_to_complete = Column(Integer, nullable=False)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    
-    
-    user = relationship('User', back_populates='recipes')
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'title': self.title,
-            'instructions': self.instructions,
-            'minutes_to_complete': self.minutes_to_complete,
-            'user': self.user.to_dict() if self.user else None
-        }
+    __table_args__ = (
+        db.CheckConstraint('length(instructions) >= 50'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String, nullable=False)
+    instructions = db.Column(db.String, nullable=False)
+    minutes_to_complete = db.Column(db.Integer)
+
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+
+    def __repr__(self):
+        return f'<Recipe {self.id}: {self.title}>'
