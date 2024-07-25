@@ -68,9 +68,15 @@ class Login(Resource):
         user = User.query.filter_by(username=username).first()
         if user and user.authenticate(password):
             session['user_id'] = user.id
-            return jsonify(user.to_dict())
+            return jsonify({
+                'id': user.id,
+                'username': user.username,
+                'image_url': user.image_url,
+                'bio': user.bio
+            }), 200
         else:
             return {'error': 'Invalid credentials'}, 401
+
 
 class Logout(Resource):
     def post(self):
