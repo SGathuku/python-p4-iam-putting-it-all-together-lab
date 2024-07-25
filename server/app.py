@@ -1,5 +1,3 @@
-# app.py
-
 #!/usr/bin/env python3
 
 from flask import request, session, jsonify
@@ -17,7 +15,6 @@ class Signup(Resource):
         image_url = data.get('image_url')
         bio = data.get('bio')
 
-        # Validate user input
         errors = []
         if not username:
             errors.append("Username is required.")
@@ -25,8 +22,8 @@ class Signup(Resource):
             errors.append("Password is required.")
         if errors:
             return {'errors': errors}, 422
+
         
-        # Create new user
         user = User(username=username, password_hash=password, image_url=image_url, bio=bio)
         try:
             db.session.add(user)
@@ -42,6 +39,9 @@ class Signup(Resource):
             db.session.rollback()
             return {'errors': ['Username already taken']}, 422
 
+
+# app.py
+
 class CheckSession(Resource):
     def get(self):
         user_id = session.get('user_id')
@@ -49,7 +49,15 @@ class CheckSession(Resource):
             return {'error': 'Not logged in'}, 401
 
         user = User.query.get(user_id)
-        return jsonify(user.to_dict())
+        if user:
+            return jsonify({
+                'id': user.id,
+                'username': user.username,
+                'image_url': user.image_url,
+                'bio': user.bio
+            }), 200
+        return {'error': 'User not found'}, 401
+
 
 class Login(Resource):
     def post(self):
