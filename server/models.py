@@ -29,5 +29,9 @@ class User(db.Model, SerializerMixin):
 
 class Recipe(db.Model, SerializerMixin):
     __tablename__ = 'recipes'
-    
-    pass
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    instructions = db.Column(db.String(500), nullable=False)
+    minutes_to_complete = db.Column(db.Integer, nullable=False)
